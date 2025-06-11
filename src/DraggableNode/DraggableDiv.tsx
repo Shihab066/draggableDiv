@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import "./DraggableDiv.scss";
 
 type ResizeDirection =
@@ -19,8 +19,6 @@ const DraggableDiv: React.FC = () => {
   const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const [size, setSize] = useState({ width: 250, height: 250 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [resizing, setResizing] = useState<ResizeDirection | null>(null);
   const offset = useRef({ x: 0, y: 0 });
   const resizeStartRef = useRef({
     mouseX: 0,
@@ -29,10 +27,14 @@ const DraggableDiv: React.FC = () => {
     height: 0,
     x: 0,
     y: 0,
+    bottom: 0,
+    right: 0,
   });
+  const isDraggingRef = useRef(false);
+  const currentResizerRef = useRef<ResizeDirection | null>(null);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
+  const startDrag = (e: React.MouseEvent) => {
+    isDraggingRef.current = true;
     const rect = divRef.current?.getBoundingClientRect();
     if (rect) {
       offset.current = {
@@ -40,159 +42,149 @@ const DraggableDiv: React.FC = () => {
         y: e.clientY - rect.top,
       };
     }
+
+    document.addEventListener("pointermove", drag);
+    document.addEventListener("pointerup", stopDrag);
   };
 
-  const handleResizeStart = (dir: ResizeDirection) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setResizing(dir);
-    const rect = divRef.current?.getBoundingClientRect();
-    if (rect) {
-      resizeStartRef.current = {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
-        width: size.width,
-        height: size.height,
-        x: position.x,
-        y: position.y,
-      };
-    }
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging && divRef.current) {
+  const drag = (e: PointerEvent) => {
+    if (isDraggingRef.current && divRef.current) {
       const newX = Math.max(
         0,
-        Math.min(
-          e.clientX - offset.current.x,
-          window.innerWidth - size.width * 0.5
-        )
+        Math.min(e.clientX - offset.current.x, window.innerWidth - size.width * 0.5)
       );
       const newY = Math.max(0, e.clientY - offset.current.y);
       setPosition({ x: newX, y: newY });
     }
+  };
 
-    if (resizing && divRef.current) {
-      const rect = divRef.current.getBoundingClientRect();
-      let newWidth = size.width;
-      let newHeight = size.height;
-      let newX = position.x;
-      let newY = position.y;
+  const stopDrag = () => {
+    isDraggingRef.current = false;
+    document.removeEventListener("pointermove", drag);
+    document.removeEventListener("pointerup", stopDrag);
+  };
 
-      const dx = e.clientX - rect.left;
-      const dy = e.clientY - rect.top;
-
-      switch (resizing) {
-        case "right":
-          newWidth = Math.min(
-            MAX_WIDTH,
-            Math.max(MIN_WIDTH, e.clientX - rect.left)
-          );
-          break;
-
-        case "left":
-          const proposedWidth = rect.right - e.clientX;
-          newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, proposedWidth));
-          newX = rect.right - newWidth;
-          break;
-
-        case "bottom":
-          const proposedHeight = e.clientY - rect.top;
-          const clampedHeight = Math.max(MIN_HEIGHT, proposedHeight);
-          if (rect.top + clampedHeight <= window.innerHeight) {
-            newHeight = clampedHeight;
-          }
-          break;
-
-        case "top":
-          const diffY = e.clientY - rect.top;
-          const proposedHeightTop = size.height - diffY;
-          const clampedTopHeight = Math.max(MIN_HEIGHT, proposedHeightTop);
-          const newTop = rect.bottom - clampedTopHeight;
-          if (newTop >= 0) {
-            newHeight = clampedTopHeight;
-            newY = newTop;
-          }
-          break;
-
-        case "top-left": {
-          const diffY = e.clientY - rect.top;
-          const proposedHeightTop = size.height - diffY;
-          const clampedTopHeight = Math.max(MIN_HEIGHT, proposedHeightTop);
-          const newTop = rect.bottom - clampedTopHeight;
-          if (newTop >= 0) {
-            newHeight = clampedTopHeight;
-            newY = newTop;
-          }
-
-          const proposedWidth = rect.right - e.clientX;
-          newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, proposedWidth));
-          newX = rect.right - newWidth;
-          break;
-        }
-
-        case "top-right": {
-           const diffY = e.clientY - rect.top;
-          const proposedHeightTop = size.height - diffY;
-          const clampedTopHeight = Math.max(MIN_HEIGHT, proposedHeightTop);
-          const newTop = rect.bottom - clampedTopHeight;
-          if (newTop >= 0) {
-            newHeight = clampedTopHeight;
-            newY = newTop;
-          }
-
-          newWidth = Math.min(
-            MAX_WIDTH,
-            Math.max(MIN_WIDTH, e.clientX - rect.left)
-          );
-          break
-        }
-
-        case "bottom-left": {
-          const proposedHeight = e.clientY - rect.top;
-          const clampedHeight = Math.max(MIN_HEIGHT, proposedHeight);
-          if (rect.top + clampedHeight <= window.innerHeight) {
-            newHeight = clampedHeight;
-          }
-
-          const proposedWidth = rect.right - e.clientX;
-          newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, proposedWidth));
-          newX = rect.right - newWidth;
-          break;
-        }
-
-        case "bottom-right": {
-          const proposedHeight = e.clientY - rect.top;
-          const clampedHeight = Math.max(MIN_HEIGHT, proposedHeight);
-          if (rect.top + clampedHeight <= window.innerHeight) {
-            newHeight = clampedHeight;
-          }
-
-          newWidth = Math.min(
-            MAX_WIDTH,
-            Math.max(MIN_WIDTH, e.clientX - rect.left)
-          );
-          break;
-        }
+  const startResize =
+    (dir: ResizeDirection) => (e: React.PointerEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      currentResizerRef.current = dir;
+      const rect = divRef.current?.getBoundingClientRect();
+      if (rect) {
+        resizeStartRef.current = {
+          mouseX: e.clientX,
+          mouseY: e.clientY,
+          width: size.width,
+          height: size.height,
+          x: position.x,
+          y: position.y,
+          bottom: rect.bottom,
+          right: rect.right,
+        };
       }
 
-      setSize({ width: newWidth, height: newHeight });
-      setPosition({ x: newX, y: newY });
-    }
-  };
-
-  const stopActions = () => {
-    setIsDragging(false);
-    setResizing(null);
-  };
-
-  useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", stopActions);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", stopActions);
+      document.addEventListener("pointermove", resize);
+      document.addEventListener("pointerup", stopResize);
     };
-  }, [isDragging, resizing, size, position]);
+
+  const resize = (e: PointerEvent) => {
+    const dir = currentResizerRef.current;
+    if (!dir || !divRef.current) return;
+
+    const start = resizeStartRef.current;
+    let newWidth = size.width;
+    let newHeight = size.height;
+    let newX = position.x;
+    let newY = position.y;
+
+    const dx = e.clientX - start.mouseX;
+    const dy = e.clientY - start.mouseY;
+
+    switch (dir) {
+      case "right":
+        newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, start.width + dx));
+        break;
+
+      case "left": {
+        const proposedWidth = start.width - dx;
+        newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, proposedWidth));
+        newX = start.x + (start.width - newWidth);
+        break;
+      }
+
+      case "bottom": {
+        const proposedHeight = start.height + dy;
+        const clampedHeight = Math.min(
+          window.innerHeight - start.y,
+          Math.max(MIN_HEIGHT, proposedHeight)
+        );
+        newHeight = clampedHeight;
+        break;
+      }
+
+      case "top": {
+        const proposedHeight = start.height - dy;
+        const clampedHeight = Math.max(MIN_HEIGHT, proposedHeight);
+        newY = Math.max(0, start.bottom - clampedHeight);
+        newHeight = Math.min(clampedHeight, start.bottom);
+        break;
+      }
+
+      case "top-left": {
+        const proposedHeight = start.height - dy;
+        const clampedHeight = Math.max(MIN_HEIGHT, proposedHeight);
+        newY = Math.max(0, start.bottom - clampedHeight);
+        newHeight = Math.min(clampedHeight, start.bottom);
+
+        newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, start.width - dx));
+        newX = start.right - newWidth;
+        break;
+      }
+
+      case "top-right": {
+        const proposedHeight = start.height - dy;
+        const clampedHeight = Math.max(MIN_HEIGHT, proposedHeight);
+        newY = Math.max(0, start.bottom - clampedHeight);
+        newHeight = Math.min(clampedHeight, start.bottom);
+
+        newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, start.width + dx));
+        break;
+      }
+
+      case "bottom-left": {
+        const proposedHeight = start.height + dy;
+        const clampedHeight = Math.min(
+          window.innerHeight - start.y,
+          Math.max(MIN_HEIGHT, proposedHeight)
+        );
+        newHeight = clampedHeight;
+
+        newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, start.width - dx));
+        newX = start.right - newWidth;
+        break;
+      }
+
+      case "bottom-right": {
+        const proposedHeight = start.height + dy;
+        const clampedHeight = Math.min(
+          window.innerHeight - start.y,
+          Math.max(MIN_HEIGHT, proposedHeight)
+        );
+        newHeight = clampedHeight;
+
+        newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, start.width + dx));
+        break;
+      }
+    }
+
+    setSize({ width: newWidth, height: newHeight });
+    setPosition({ x: newX, y: newY });
+  };
+
+  const stopResize = () => {
+    currentResizerRef.current = null;
+    document.removeEventListener("pointermove", resize);
+    document.removeEventListener("pointerup", stopResize);
+  };
 
   return (
     <div
@@ -204,9 +196,9 @@ const DraggableDiv: React.FC = () => {
         left: position.x,
         top: position.y,
         position: "fixed",
-        cursor: isDragging ? "grabbing" : "grab",
+        cursor: isDraggingRef.current ? "grabbing" : "grab",
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={startDrag}
     >
       Drag & Resize Me
       {[
@@ -222,7 +214,7 @@ const DraggableDiv: React.FC = () => {
         <div
           key={dir}
           className={`resizeHandle ${dir}`}
-          onMouseDown={handleResizeStart(dir as ResizeDirection)}
+          onPointerDown={startResize(dir as ResizeDirection)}
           style={{ cursor }}
         />
       ))}
