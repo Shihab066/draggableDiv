@@ -12,8 +12,6 @@
 
 .resizeHandle {
   position: absolute;
-  width: 12px;
-  height: 12px;
   background: transparent;
   z-index: 10;
 }
@@ -23,6 +21,7 @@
   left: 0;
   height: 12px;
   width: 100%;
+  cursor: ns-resize;
 }
 
 .right {
@@ -31,6 +30,7 @@
   transform: translateY(-50%);
   width: 12px;
   height: 100%;
+  cursor: ew-resize;
 }
 
 .bottom {
@@ -39,6 +39,7 @@
   transform: translateX(-50%);
   height: 12px;
   width: 100%;
+  cursor: ns-resize;
 }
 
 .left {
@@ -46,24 +47,37 @@
   left: -6px;
   width: 12px;
   height: 100%;
+  cursor: ew-resize;
 }
 
 .top-left {
   top: -6px;
   left: -6px;
+  width: 15px;
+  height: 15px;
+  cursor: nwse-resize;
 }
 
 .top-right {
   top: -6px;
   right: -6px;
+  width: 15px;
+  height: 15px;
+  cursor: nesw-resize;
 }
 
 .bottom-left {
   bottom: -6px;
   left: -6px;
+  width: 15px;
+  height: 15px;
+  cursor: nesw-resize;
 }
 
 .bottom-right {
   bottom: -6px;
   right: -6px;
+  width: 15px;
+  height: 15px;
+  cursor: nwse-resize;
 }

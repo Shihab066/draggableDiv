@@ -51,7 +51,10 @@ const DraggableDiv: React.FC = () => {
     if (isDraggingRef.current && divRef.current) {
       const newX = Math.max(
         0,
-        Math.min(e.clientX - offset.current.x, window.innerWidth - size.width * 0.5)
+        Math.min(
+          e.clientX - offset.current.x,
+          window.innerWidth - size.width * 0.5
+        )
       );
       const newY = Math.max(0, e.clientY - offset.current.y);
       setPosition({ x: newX, y: newY });
@@ -202,20 +205,19 @@ const DraggableDiv: React.FC = () => {
     >
       Drag & Resize Me
       {[
-        ["top", "ns-resize"],
-        ["right", "ew-resize"],
-        ["bottom", "ns-resize"],
-        ["left", "ew-resize"],
-        ["top-left", "nwse-resize"],
-        ["top-right", "nesw-resize"],
-        ["bottom-left", "nesw-resize"],
-        ["bottom-right", "nwse-resize"],
-      ].map(([dir, cursor]) => (
+        "top",
+        "right",
+        "bottom",
+        "left",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+      ].map((dir) => (
         <div
           key={dir}
           className={`resizeHandle ${dir}`}
           onPointerDown={startResize(dir as ResizeDirection)}
-          style={{ cursor }}
         />
       ))}
     </div>
